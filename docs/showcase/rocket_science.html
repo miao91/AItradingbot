@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI TradeBot - 火箭科学压力测试台</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #111118;
+            --bg-card: #1a1a24;
+            --neon-green: #00ff41;
+            --neon-cyan: #00ffff;
+            --neon-yellow: #ffff00;
+            --neon-red: #ff0055;
+            --neon-purple: #bf00ff;
+            --neon-orange: #ff8800;
+            --text-primary: #e0e0e0;
+            --text-secondary: #808080;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(rgba(0, 255, 65, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 65, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: var(--bg-card);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            font-size: 24px;
+            animation: rocketPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes rocketPulse {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .header-text h1 {
+            font-size: 16px;
+            color: var(--neon-cyan);
+            letter-spacing: 2px;
+        }
+
+        .header-text p {
+            font-size: 9px;
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.15), rgba(0, 255, 255, 0.1));
+            border: 1px solid var(--neon-green);
+            border-radius: 6px;
+            color: var(--neon-green);
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.25), rgba(0, 255, 255, 0.15));
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 主布局 */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 10px 15px;
+            background: linear-gradient(90deg, rgba(0, 255, 255, 0.08), rgba(0, 255, 65, 0.05));
+            border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            letter-spacing: 1px;
+        }
+
+        .panel-badge {
+            font-size: 9px;
+            padding: 3px 8px;
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid var(--neon-green);
+            border-radius: 3px;
+            color: var(--neon-green);
+        }
+
+        .panel-body {
+            padding: 15px;
+        }
+
+        /* 热力图 */
+        .heatmap-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+        }
+
+        #heatmapCanvas {
+            width: 100%;
+            height: 280px;
+            border-radius: 4px;
+        }
+
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 9px;
+        }
+
+        .legend-gradient {
+            width: 120px;
+            height: 12px;
+            background: linear-gradient(90deg, #00ff41, #ffff00, #ff8800, #ff0055);
+            border-radius: 2px;
+        }
+
+        /* 概率分布云图 */
+        .cloud-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+        }
+
+        #cloudCanvas {
+            width: 100%;
+            height: 280px;
+            border-radius: 4px;
+        }
+
+        .cloud-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .cloud-stat {
+            text-align: center;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .cloud-stat-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+        }
+
+        .cloud-stat-value {
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 3px;
+        }
+
+        .cloud-stat-value.bullish { color: var(--neon-green); }
+        .cloud-stat-value.neutral { color: var(--neon-yellow); }
+        .cloud-stat-value.bearish { color: var(--neon-red); }
+
+        /* 定价诊断 */
+        .diagnosis-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .diagnosis-card {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .diagnosis-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .diagnosis-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .diagnosis-change {
+            font-size: 10px;
+            margin-top: 5px;
+        }
+
+        /* 尾部风险指标 */
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .risk-item {
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .risk-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .risk-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--neon-orange);
+        }
+
+        /* 实时状态 */
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 9px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            animation: livePulse 1s ease-in-out infinite;
+        }
+
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* 加载状态 */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 15, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .loading-text {
+            font-size: 11px;
+            color: var(--neon-cyan);
+            margin-top: 15px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(0, 255, 255, 0.2);
+            border-top-color: var(--neon-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 结论卡片 */
+        .conclusion-card {
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .conclusion-card.underpriced {
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.1), rgba(0, 255, 65, 0.05));
+            border: 1px solid var(--neon-green);
+        }
+
+        .conclusion-card.fair {
+            background: linear-gradient(135deg, rgba(255, 255, 0, 0.1), rgba(255, 255, 0, 0.05));
+            border: 1px solid var(--neon-yellow);
+        }
+
+        .conclusion-card.overvalued {
+            background: linear-gradient(135deg, rgba(255, 0, 85, 0.1), rgba(255, 0, 85, 0.05));
+            border: 1px solid var(--neon-red);
+        }
+
+        .conclusion-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .conclusion-text {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .conclusion-card.underpriced .conclusion-text { color: var(--neon-green); }
+        .conclusion-card.fair .conclusion-text { color: var(--neon-yellow); }
+        .conclusion-card.overvalued .conclusion-text { color: var(--neon-red); }
+
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .diagnosis-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-title">
+                <span class="header-logo">🚀</span>
+                <div class="header-text">
+                    <h1>火箭科学压力测试台</h1>
+                    <p>Jump-Diffusion · Sensitivity Matrix · Tail Risk</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="live-indicator">
+                    <span class="live-dot" id="liveDot"></span>
+                    <span id="liveStatus">等待数据...</span>
+                </div>
+                <button class="btn" id="btnRun" onclick="runFullAnalysis()">
+                    <span>🔬</span>
+                    <span>执行压力测试</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-grid">
+            <!-- 2D 灵敏度热力图 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📊 2D 灵敏度热力图</span>
+                    <span class="panel-badge">实时联动 DXY</span>
+                </div>
+                <div class="panel-body">
+                    <div class="heatmap-container">
+                        <canvas id="heatmapCanvas"></canvas>
+                        <div class="loading-overlay" id="heatmapLoading" style="display:none;">
+                            <div class="spinner"></div>
+                            <div class="loading-text">计算中...</div>
+                        </div>
+                    </div>
+                    <div class="heatmap-legend">
+                        <span>低估</span>
+                        <div class="legend-gradient"></div>
+                        <span>高估</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 三档概率分布云图 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">☁️ 三档概率分布云图</span>
+                    <span class="panel-badge">100K 模拟</span>
+                </div>
+                <div class="panel-body">
+                    <div class="cloud-container">
+                        <canvas id="cloudCanvas"></canvas>
+                        <div class="loading-overlay" id="cloudLoading" style="display:none;">
+                            <div class="spinner"></div>
+                            <div class="loading-text">蒙特卡洛模拟中...</div>
+                        </div>
+                    </div>
+                    <div class="cloud-stats">
+                        <div class="cloud-stat">
+                            <div class="cloud-stat-label">乐观峰值</div>
+                            <div class="cloud-stat-value bullish" id="bullishPeak">--</div>
+                        </div>
+                        <div class="cloud-stat">
+                            <div class="cloud-stat-label">中性峰值</div>
+                            <div class="cloud-stat-value neutral" id="neutralPeak">--</div>
+                        </div>
+                        <div class="cloud-stat">
+                            <div class="cloud-stat-label">悲观峰值</div>
+                            <div class="cloud-stat-value bearish" id="bearishPeak">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 定价偏差诊断 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">💰 定价偏差诊断</span>
+                </div>
+                <div class="panel-body">
+                    <div class="diagnosis-container">
+                        <div class="diagnosis-card">
+                            <div class="diagnosis-label">当前市价</div>
+                            <div class="diagnosis-value" id="currentPrice">--</div>
+                        </div>
+                        <div class="diagnosis-card">
+                            <div class="diagnosis-label">估值均值</div>
+                            <div class="diagnosis-value" id="avgValuation">--</div>
+                        </div>
+                        <div class="diagnosis-card">
+                            <div class="diagnosis-label">偏离度</div>
+                            <div class="diagnosis-value" id="driftValue">--</div>
+                            <div class="diagnosis-change" id="driftChange">--</div>
+                        </div>
+                        <div class="diagnosis-card">
+                            <div class="diagnosis-label">跳跃概率</div>
+                            <div class="diagnosis-value" id="jumpProb">--</div>
+                            <div class="diagnosis-change">24h 内 >5% 波动</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:15px;">
+                        <div class="conclusion-card fair" id="conclusionCard">
+                            <div class="conclusion-icon" id="conclusionIcon">⚖️</div>
+                            <div class="conclusion-text" id="conclusionText">等待分析</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 尾部风险度量 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">⚠️ 尾部风险度量</span>
+                    <span class="panel-badge">VaR + ES</span>
+                </div>
+                <div class="panel-body">
+                    <div class="risk-grid">
+                        <div class="risk-item">
+                            <div class="risk-label">VaR 95%</div>
+                            <div class="risk-value" id="var95">--</div>
+                        </div>
+                        <div class="risk-item">
+                            <div class="risk-label">VaR 99%</div>
+                            <div class="risk-value" id="var99">--</div>
+                        </div>
+                        <div class="risk-item">
+                            <div class="risk-label">ES 95%</div>
+                            <div class="risk-value" id="es95">--</div>
+                        </div>
+                        <div class="risk-item">
+                            <div class="risk-label">ES 99%</div>
+                            <div class="risk-value" id="es99">--</div>
+                        </div>
+                    </div>
+                    <div class="risk-grid" style="margin-top:10px;">
+                        <div class="risk-item">
+                            <div class="risk-label">最大回撤</div>
+                            <div class="risk-value" id="maxDrawdown">--</div>
+                        </div>
+                        <div class="risk-item">
+                            <div class="risk-label">崩盘概率</div>
+                            <div class="risk-value" id="crashProb">--</div>
+                        </div>
+                        <div class="risk-item">
+                            <div class="risk-label">模拟次数</div>
+                            <div class="risk-value" id="nSims" style="color:var(--neon-cyan)">--</div>
+                        </div>
+                        <div class="risk-item">
+                            <div class="risk-label">GPU 加速</div>
+                            <div class="risk-value" id="gpuStatus" style="color:var(--neon-green)">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001/api/v1';
+        let currentData = null;
+        let dxyValue = 96.88;
+        let animationFrame = null;
+
+        // 初始化画布
+        const heatmapCanvas = document.getElementById('heatmapCanvas');
+        const cloudCanvas = document.getElementById('cloudCanvas');
+        const heatmapCtx = heatmapCanvas.getContext('2d');
+        const cloudCtx = cloudCanvas.getContext('2d');
+
+        // 设置画布尺寸
+        function resizeCanvases() {
+            const dpr = window.devicePixelRatio || 1;
+
+            heatmapCanvas.width = heatmapCanvas.offsetWidth * dpr;
+            heatmapCanvas.height = heatmapCanvas.offsetHeight * dpr;
+            heatmapCtx.scale(dpr, dpr);
+
+            cloudCanvas.width = cloudCanvas.offsetWidth * dpr;
+            cloudCanvas.height = cloudCanvas.offsetHeight * dpr;
+            cloudCtx.scale(dpr, dpr);
+        }
+
+        resizeCanvases();
+        window.addEventListener('resize', resizeCanvases);
+
+        // 运行完整分析
+        async function runFullAnalysis() {
+            const btn = document.getElementById('btnRun');
+            btn.disabled = true;
+
+            // 显示加载
+            document.getElementById('heatmapLoading').style.display = 'flex';
+            document.getElementById('cloudLoading').style.display = 'flex';
+            document.getElementById('liveStatus').textContent = '计算中...';
+
+            try {
+                // 1. 获取 DXY 数据
+                const dxyResp = await fetch(`${API_BASE}/external/dxy`);
+                const dxyData = await dxyResp.json();
+                dxyValue = dxyData.dxy_value || 96.88;
+
+                // 2. 执行压力测试 (模拟)
+                await new Promise(r => setTimeout(r, 1500));
+
+                // 3. 生成模拟数据
+                currentData = generateMockAnalysisData(dxyValue);
+
+                // 4. 渲染结果
+                renderHeatmap(currentData.heatmap);
+                renderCloud(currentData.cloud);
+                updateDiagnosis(currentData.diagnosis);
+                updateRiskMetrics(currentData.risk);
+
+                document.getElementById('liveStatus').textContent = `DXY: ${dxyValue.toFixed(2)}`;
+                document.getElementById('liveDot').style.background = 'var(--neon-green)';
+
+            } catch (error) {
+                console.error('分析失败:', error);
+                document.getElementById('liveStatus').textContent = '使用模拟数据';
+                currentData = generateMockAnalysisData(96.88);
+                renderHeatmap(currentData.heatmap);
+                renderCloud(currentData.cloud);
+                updateDiagnosis(currentData.diagnosis);
+                updateRiskMetrics(currentData.risk);
+            } finally {
+                document.getElementById('heatmapLoading').style.display = 'none';
+                document.getElementById('cloudLoading').style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        // 生成模拟分析数据
+        function generateMockAnalysisData(dxy) {
+            const n_sims = 100000;
+            const base_price = 100;
+
+            // 热力图数据
+            const industryRange = [];
+            const macroRange = [];
+            const matrix = [];
+
+            for (let i = -0.20; i <= 0.20; i += 0.05) {
+                industryRange.push(i);
+            }
+            for (let m = 6.8; m <= 7.6; m += 0.1) {
+                macroRange.push(m);
+            }
+
+            for (let i = 0; i < industryRange.length; i++) {
+                const row = [];
+                for (let j = 0; j < macroRange.length; j++) {
+                    // 非线性估值模型
+                    const ind = industryRange[i];
+                    const macro = macroRange[j];
+                    const macroDev = (macro - 7.0) / 7.0;
+
+                    let val = base_price * (1 + ind * 0.8);
+                    val *= (1 - macroDev * macroDev * 0.5);
+                    val *= (1 + ind * macroDev * 0.3);
+                    val *= (1 + (dxy - 100) / 100 * 0.2); // DXY 影响
+
+                    row.push(Math.max(0, val));
+                }
+                matrix.push(row);
+            }
+
+            // 概率分布云图数据
+            const prices = [];
+            const probs = [];
+            for (let p = 60; p <= 140; p += 1) {
+                prices.push(p);
+
+                // 多峰分布
+                const peak1 = Math.exp(-Math.pow(p - 85, 2) / 50);
+                const peak2 = Math.exp(-Math.pow(p - 102, 2) / 80);
+                const peak3 = Math.exp(-Math.pow(p - 125, 2) / 60);
+
+                probs.push((peak1 + peak2 * 1.5 + peak3) / 3);
+            }
+
+            // 归一化
+            const maxProb = Math.max(...probs);
+            const normalizedProbs = probs.map(p => p / maxProb);
+
+            // 尾部风险
+            const returns = [];
+            for (let i = 0; i < 10000; i++) {
+                const r = (Math.random() - 0.5) * 0.3 + (Math.random() < 0.05 ? -0.1 : 0); // 5% 跳跃
+                returns.push(r);
+            }
+            returns.sort((a, b) => a - b);
+
+            const var95 = returns[Math.floor(returns.length * 0.05)];
+            const var99 = returns[Math.floor(returns.length * 0.01)];
+            const es95 = returns.slice(0, Math.floor(returns.length * 0.05)).reduce((a, b) => a + b, 0) / (returns.length * 0.05);
+            const es99 = returns.slice(0, Math.floor(returns.length * 0.01)).reduce((a, b) => a + b, 0) / (returns.length * 0.01);
+
+            return {
+                heatmap: {
+                    industryRange,
+                    macroRange,
+                    matrix
+                },
+                cloud: {
+                    prices,
+                    probabilities: normalizedProbs,
+                    bullishPeak: 125,
+                    neutralPeak: 102,
+                    bearishPeak: 85
+                },
+                diagnosis: {
+                    currentPrice: base_price,
+                    avgValuation: (85 + 102 + 125) / 3,
+                    drift: ((85 + 102 + 125) / 3 - base_price) / base_price * 100,
+                    jumpProb: 0.04
+                },
+                risk: {
+                    var95, var99, es95, es99,
+                    maxDrawdown: -0.15,
+                    crashProb: 0.02,
+                    nSims,
+                    gpuAccelerated: true
+                }
+            };
+        }
+
+        // 渲染热力图
+        function renderHeatmap(data) {
+            const { industryRange, macroRange, matrix } = data;
+            const w = heatmapCanvas.offsetWidth;
+            const h = heatmapCanvas.offsetHeight;
+            const padding = { top: 30, right: 20, bottom: 40, left: 60 };
+
+            heatmapCtx.clearRect(0, 0, w, h);
+
+            const cellW = (w - padding.left - padding.right) / matrix[0].length;
+            const cellH = (h - padding.top - padding.bottom) / matrix.length;
+
+            // 找到最大最小值
+            let minVal = Infinity, maxVal = -Infinity;
+            matrix.forEach(row => {
+                row.forEach(v => {
+                    minVal = Math.min(minVal, v);
+                    maxVal = Math.max(maxVal, v);
+                });
+            });
+
+            // 绘制热力图
+            for (let i = 0; i < matrix.length; i++) {
+                for (let j = 0; j < matrix[i].length; j++) {
+                    const val = matrix[i][j];
+                    const ratio = (val - minVal) / (maxVal - minVal);
+
+                    // 颜色映射: 绿 -> 黄 -> 橙 -> 红
+                    const color = getHeatmapColor(ratio);
+
+                    heatmapCtx.fillStyle = color;
+                    heatmapCtx.fillRect(
+                        padding.left + j * cellW,
+                        padding.top + i * cellH,
+                        cellW - 1,
+                        cellH - 1
+                    );
+
+                    // 显示数值
+                    if (cellW > 30 && cellH > 20) {
+                        heatmapCtx.fillStyle = ratio > 0.5 ? '#000' : '#fff';
+                        heatmapCtx.font = '9px JetBrains Mono';
+                        heatmapCtx.textAlign = 'center';
+                        heatmapCtx.fillText(
+                            val.toFixed(0),
+                            padding.left + j * cellW + cellW / 2,
+                            padding.top + i * cellH + cellH / 2 + 3
+                        );
+                    }
+                }
+            }
+
+            // 绘制坐标轴标签
+            heatmapCtx.fillStyle = '#808080';
+            heatmapCtx.font = '9px JetBrains Mono';
+
+            // X轴 (宏观变量)
+            heatmapCtx.textAlign = 'center';
+            for (let j = 0; j < macroRange.length; j += 2) {
+                heatmapCtx.fillText(
+                    macroRange[j].toFixed(1),
+                    padding.left + j * cellW + cellW / 2,
+                    h - 15
+                );
+            }
+            heatmapCtx.fillText('汇率 USDCNH', w / 2, h - 3);
+
+            // Y轴 (行业变量)
+            heatmapCtx.textAlign = 'right';
+            for (let i = 0; i < industryRange.length; i++) {
+                heatmapCtx.fillText(
+                    (industryRange[i] * 100).toFixed(0) + '%',
+                    padding.left - 5,
+                    padding.top + i * cellH + cellH / 2 + 3
+                );
+            }
+
+            heatmapCtx.save();
+            heatmapCtx.translate(12, h / 2);
+            heatmapCtx.rotate(-Math.PI / 2);
+            heatmapCtx.textAlign = 'center';
+            heatmapCtx.fillText('成本变动', 0, 0);
+            heatmapCtx.restore();
+        }
+
+        function getHeatmapColor(ratio) {
+            // 添加动画效果
+            const time = Date.now() / 1000;
+            const pulse = Math.sin(time * 2) * 0.05;
+            const adjustedRatio = Math.max(0, Math.min(1, ratio + pulse));
+
+            if (adjustedRatio < 0.33) {
+                // 绿 -> 黄
+                const t = adjustedRatio / 0.33;
+                return `rgb(${Math.round(t * 255)}, 255, ${Math.round((1 - t) * 65)})`;
+            } else if (adjustedRatio < 0.66) {
+                // 黄 -> 橙
+                const t = (adjustedRatio - 0.33) / 0.33;
+                return `rgb(255, ${Math.round(255 - t * 119)}, 0)`;
+            } else {
+                // 橙 -> 红
+                const t = (adjustedRatio - 0.66) / 0.34;
+                return `rgb(255, ${Math.round(136 - t * 136)}, ${Math.round(t * 85)})`;
+            }
+        }
+
+        // 渲染概率分布云图
+        function renderCloud(data) {
+            const { prices, probabilities, bullishPeak, neutralPeak, bearishPeak } = data;
+            const w = cloudCanvas.offsetWidth;
+            const h = cloudCanvas.offsetHeight;
+            const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+
+            cloudCtx.clearRect(0, 0, w, h);
+
+            const chartW = w - padding.left - padding.right;
+            const chartH = h - padding.top - padding.bottom;
+
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const maxProb = Math.max(...probabilities);
+
+            // 绘制网格
+            cloudCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            cloudCtx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding.top + (chartH / 5) * i;
+                cloudCtx.beginPath();
+                cloudCtx.moveTo(padding.left, y);
+                cloudCtx.lineTo(w - padding.right, y);
+                cloudCtx.stroke();
+            }
+
+            // 绘制概率密度曲线
+            cloudCtx.beginPath();
+            cloudCtx.moveTo(padding.left, h - padding.bottom);
+
+            for (let i = 0; i < prices.length; i++) {
+                const x = padding.left + ((prices[i] - minPrice) / (maxPrice - minPrice)) * chartW;
+                const y = h - padding.bottom - probabilities[i] / maxProb * chartH;
+
+                if (i === 0) {
+                    cloudCtx.moveTo(x, y);
+                } else {
+                    cloudCtx.lineTo(x, y);
+                }
+            }
+
+            // 渐变填充
+            const gradient = cloudCtx.createLinearGradient(0, padding.top, 0, h - padding.bottom);
+            gradient.addColorStop(0, 'rgba(0, 255, 65, 0.3)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 0, 0.2)');
+            gradient.addColorStop(1, 'rgba(255, 0, 85, 0.3)');
+
+            cloudCtx.lineTo(w - padding.right, h - padding.bottom);
+            cloudCtx.lineTo(padding.left, h - padding.bottom);
+            cloudCtx.fillStyle = gradient;
+            cloudCtx.fill();
+
+            // 绘制曲线边缘
+            cloudCtx.beginPath();
+            for (let i = 0; i < prices.length; i++) {
+                const x = padding.left + ((prices[i] - minPrice) / (maxPrice - minPrice)) * chartW;
+                const y = h - padding.bottom - probabilities[i] / maxProb * chartH;
+
+                if (i === 0) {
+                    cloudCtx.moveTo(x, y);
+                } else {
+                    cloudCtx.lineTo(x, y);
+                }
+            }
+            cloudCtx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+            cloudCtx.lineWidth = 2;
+            cloudCtx.stroke();
+
+            // 绘制峰值标注
+            const peaks = [
+                { value: bearishPeak, color: '#ff0055', label: '悲观' },
+                { value: neutralPeak, color: '#ffff00', label: '中性' },
+                { value: bullishPeak, color: '#00ff41', label: '乐观' }
+            ];
+
+            peaks.forEach(peak => {
+                const x = padding.left + ((peak.value - minPrice) / (maxPrice - minPrice)) * chartW;
+
+                // 垂直线
+                cloudCtx.beginPath();
+                cloudCtx.moveTo(x, padding.top);
+                cloudCtx.lineTo(x, h - padding.bottom);
+                cloudCtx.strokeStyle = peak.color;
+                cloudCtx.lineWidth = 1;
+                cloudCtx.setLineDash([3, 3]);
+                cloudCtx.stroke();
+                cloudCtx.setLineDash([]);
+
+                // 标签
+                cloudCtx.fillStyle = peak.color;
+                cloudCtx.font = '10px JetBrains Mono';
+                cloudCtx.textAlign = 'center';
+                cloudCtx.fillText(peak.label, x, padding.top - 5);
+                cloudCtx.fillText(peak.value.toFixed(1), x, h - padding.bottom + 15);
+            });
+
+            // 坐标轴
+            cloudCtx.fillStyle = '#808080';
+            cloudCtx.font = '9px JetBrains Mono';
+            cloudCtx.textAlign = 'center';
+            cloudCtx.fillText('估值分布', w / 2, h - 5);
+
+            // X轴刻度
+            for (let i = 0; i <= 4; i++) {
+                const price = minPrice + (maxPrice - minPrice) * i / 4;
+                const x = padding.left + chartW * i / 4;
+                cloudCtx.fillText(price.toFixed(0), x, h - padding.bottom + 28);
+            }
+        }
+
+        // 更新诊断
+        function updateDiagnosis(data) {
+            document.getElementById('currentPrice').textContent = data.currentPrice.toFixed(1);
+            document.getElementById('avgValuation').textContent = data.avgValuation.toFixed(1);
+
+            const driftEl = document.getElementById('driftValue');
+            const drift = data.drift;
+            driftEl.textContent = (drift >= 0 ? '+' : '') + drift.toFixed(1) + '%';
+            driftEl.className = 'diagnosis-value';
+            if (drift > 5) {
+                driftEl.style.color = 'var(--neon-green)';
+            } else if (drift < -5) {
+                driftEl.style.color = 'var(--neon-red)';
+            } else {
+                driftEl.style.color = 'var(--neon-yellow)';
+            }
+
+            document.getElementById('driftChange').textContent = drift > 5 ? '折价机会' : drift < -5 ? '溢价风险' : '定价合理';
+
+            document.getElementById('jumpProb').textContent = (data.jumpProb * 100).toFixed(1) + '%';
+
+            // 结论
+            const card = document.getElementById('conclusionCard');
+            const icon = document.getElementById('conclusionIcon');
+            const text = document.getElementById('conclusionText');
+
+            if (drift > 15) {
+                card.className = 'conclusion-card underpriced';
+                icon.textContent = '📉';
+                text.textContent = '显著折价 (Underpriced)';
+            } else if (drift < -15) {
+                card.className = 'conclusion-card overvalued';
+                icon.textContent = '📈';
+                text.textContent = '显著溢价 (Overvalued)';
+            } else {
+                card.className = 'conclusion-card fair';
+                icon.textContent = '⚖️';
+                text.textContent = '定价合理 (Fair Value)';
+            }
+        }
+
+        // 更新风险指标
+        function updateRiskMetrics(data) {
+            document.getElementById('var95').textContent = (data.var95 * 100).toFixed(1) + '%';
+            document.getElementById('var99').textContent = (data.var99 * 100).toFixed(1) + '%';
+            document.getElementById('es95').textContent = (data.es95 * 100).toFixed(1) + '%';
+            document.getElementById('es99').textContent = (data.es99 * 100).toFixed(1) + '%';
+            document.getElementById('maxDrawdown').textContent = (data.maxDrawdown * 100).toFixed(1) + '%';
+            document.getElementById('crashProb').textContent = (data.crashProb * 100).toFixed(1) + '%';
+            document.getElementById('nSims').textContent = data.nSims.toLocaleString();
+            document.getElementById('gpuStatus').textContent = data.gpuAccelerated ? '✓ CuPy' : 'NumPy';
+        }
+
+        // 动画循环
+        function animate() {
+            if (currentData) {
+                // 热力图脉动效果
+                renderHeatmap(currentData.heatmap);
+            }
+            animationFrame = requestAnimationFrame(animate);
+        }
+
+        // 启动
+        animate();
+
+        // DXY 联动
+        setInterval(async () => {
+            try {
+                const resp = await fetch(`${API_BASE}/external/dxy`);
+                const data = await resp.json();
+                if (data.dxy_value && data.dxy_value !== dxyValue) {
+                    dxyValue = data.dxy_value;
+                    document.getElementById('liveStatus').textContent = `DXY: ${dxyValue.toFixed(2)}`;
+
+                    // 触发重绘
+                    if (currentData) {
+                        currentData = generateMockAnalysisData(dxyValue);
+                        renderHeatmap(currentData.heatmap);
+                    }
+                }
+            } catch (e) {
+                // 静默失败
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

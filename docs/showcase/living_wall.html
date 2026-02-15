@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI TradeBot - The Living Logic Wall</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #111118;
+            --bg-card: #1a1a24;
+            --neon-green: #00ff41;
+            --neon-cyan: #00ffff;
+            --neon-yellow: #ffff00;
+            --neon-red: #ff0055;
+            --neon-purple: #bf00ff;
+            --text-primary: #e0e0e0;
+            --text-secondary: #808080;
+            --text-muted: #404040;
+            --border-glow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 扫描线效果 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1),
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 400px 1fr 350px;
+            grid-template-rows: auto 1fr auto;
+            gap: 0;
+            height: 100vh;
+            max-height: 100vh;
+        }
+
+        /* 顶部状态栏 */
+        .header {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-green), transparent);
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--neon-green);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: var(--border-glow);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 65, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(0, 255, 65, 0.8); }
+        }
+
+        .logo-text h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--neon-green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .logo-text p {
+            font-size: 11px;
+            color: var(--text-secondary);
+            letter-spacing: 4px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        .status-dot.online {
+            background: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .status-dot.processing {
+            background: var(--neon-yellow);
+            box-shadow: 0 0 10px var(--neon-yellow);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .status-value {
+            color: var(--neon-green);
+            font-weight: 600;
+        }
+
+        /* 左侧日志流 */
+        .log-panel {
+            background: var(--bg-secondary);
+            border-right: 1px solid rgba(0, 255, 65, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 15px 20px;
+            background: rgba(0, 255, 65, 0.05);
+            border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--neon-green);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title::before {
+            content: '>';
+            animation: blink 0.5s ease-in-out infinite;
+        }
+
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-size: 11px;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: var(--neon-green);
+            border-radius: 2px;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            border-left: 2px solid var(--text-muted);
+            background: rgba(0, 0, 0, 0.3);
+            animation: slideInLeft 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-entry::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: inherit;
+            animation: logGlow 2s ease-out;
+        }
+
+        @keyframes logGlow {
+            0% { box-shadow: 0 0 20px currentColor; }
+            100% { box-shadow: none; }
+        }
+
+        .log-entry.perception {
+            border-color: var(--neon-cyan);
+            color: #00cccc;
+        }
+
+        .log-entry.analysis {
+            border-color: var(--neon-purple);
+            color: #bf00bf;
+        }
+
+        .log-entry.decision {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+        }
+
+        .log-entry.filtered {
+            border-color: var(--text-muted);
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .log-entry.error {
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+        }
+
+        .log-timestamp {
+            color: var(--text-secondary);
+            font-size: 10px;
+            margin-right: 8px;
+        }
+
+        .log-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-right: 8px;
+            letter-spacing: 1px;
+        }
+
+        .log-entry.perception .log-tag { background: rgba(0, 255, 255, 0.1); }
+        .log-entry.analysis .log-tag { background: rgba(191, 0, 255, 0.1); }
+        .log-entry.decision .log-tag { background: rgba(0, 255, 65, 0.1); }
+        .log-entry.filtered .log-tag { background: rgba(128, 128, 128, 0.1); }
+        .log-entry.error .log-tag { background: rgba(255, 0, 85, 0.1); }
+
+        /* 中央工作区 */
+        .workspace {
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 逻辑进化卡片 */
+        .logic-cards {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .logic-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            animation: cardEnter 0.5s ease;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        @keyframes cardEnter {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .logic-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.1), transparent);
+            animation: cardShine 3s ease-in-out;
+        }
+
+        @keyframes cardShine {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
+        }
+
+        .logic-card:hover {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.2);
+            transform: translateX(5px);
+        }
+
+        .logic-card.new {
+            animation: cardEnter 0.5s ease, cardPulse 1s ease;
+        }
+
+        @keyframes cardPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(0, 255, 65, 0.6); }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-ticker {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--neon-green);
+            letter-spacing: 2px;
+        }
+
+        .card-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-analyzing {
+            background: rgba(191, 0, 255, 0.2);
+            color: var(--neon-purple);
+            border: 1px solid var(--neon-purple);
+        }
+
+        .status-decision {
+            background: rgba(0, 255, 65, 0.2);
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+        }
+
+        /* 思维进度条 */
+        .thinking-progress {
+            margin-bottom: 15px;
+        }
+
+        .progress-steps {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .progress-step {
+            flex: 1;
+            height: 4px;
+            background: var(--bg-primary);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-step.active::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--neon-green);
+            animation: progressFill 1s ease forwards;
+        }
+
+        @keyframes progressFill {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        .progress-step.perception.active::after { background: var(--neon-cyan); }
+        .progress-step.analysis.active::after { background: var(--neon-purple); }
+        .progress-step.decision.active::after { background: var(--neon-green); }
+
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-label.active {
+            color: var(--neon-green);
+        }
+
+        .card-content {
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .card-summary {
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-exit-plan {
+            background: rgba(0, 255, 65, 0.05);
+            border-left: 2px solid var(--neon-green);
+            padding: 10px;
+            font-size: 11px;
+        }
+
+        .exit-plan-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .exit-plan-label {
+            color: var(--text-secondary);
+        }
+
+        .exit-plan-value {
+            color: var(--neon-green);
+            font-weight: 600;
+        }
+
+        /* 展开的详情 */
+        .card-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .logic-card.expanded .card-details {
+            max-height: 500px;
+        }
+
+        .detail-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 255, 65, 0.1);
+        }
+
+        .detail-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--neon-green);
+            margin-bottom: 10px;
+        }
+
+        .detail-content {
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--bg-primary);
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* 右侧统计面板 */
+        .stats-panel {
+            background: var(--bg-secondary);
+            border-left: 1px solid rgba(0, 255, 65, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .stats-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(0, 255, 65, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--neon-green);
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-secondary);
+        }
+
+        .stat-chart {
+            height: 40px;
+            margin-top: 10px;
+            display: flex;
+            align-items: end;
+            gap: 2px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: var(--neon-green);
+            opacity: 0.3;
+            border-radius: 2px 2px 0 0;
+            transition: all 0.3s;
+        }
+
+        .chart-bar:hover {
+            opacity: 0.8;
+        }
+
+        /* 底部时间轴 */
+        .timeline {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-top: 1px solid rgba(0, 255, 65, 0.1);
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .timeline-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .timeline-track {
+            flex: 1;
+            height: 40px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timeline-event {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-green);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .timeline-event:hover {
+            transform: translateY(-50%) scale(1.5);
+        }
+
+        .timeline-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.3), transparent);
+        }
+
+        /* 矩阵雨效果 */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.03;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 350px 1fr 300px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr auto;
+            }
+            .stats-panel {
+                display: none;
+            }
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--neon-green);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-cyan);
+        }
+
+        /* 连接状态 */
+        .connection-status {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 20px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            transition: all 0.3s;
+        }
+
+        .connection-status.disconnected {
+            border-color: var(--neon-red);
+        }
+
+        .connection-status.disconnected .status-dot {
+            background: var(--neon-red);
+            box-shadow: 0 0 10px var(--neon-red);
+        }
+    </style>
+</head>
+<body>
+    <canvas class="matrix-bg" id="matrixBg"></canvas>
+
+    <div class="container">
+        <!-- 顶部 -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">AI</div>
+                <div class="logo-text">
+                    <h1>TradeBot</h1>
+                    <p>LIVING LOGIC WALL</p>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-dot online" id="wsStatus"></div>
+                    <span id="wsStatusText">连接中...</span>
+                </div>
+                <div class="status-item">
+                    <span class="stat-label">事件</span>
+                    <span class="status-value" id="totalEvents">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="stat-label">决策</span>
+                    <span class="status-value" id="totalDecisions">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="stat-label">过滤</span>
+                    <span class="status-value" id="totalFiltered">0</span>
+                </div>
+                <div class="status-item">
+                    <span id="currentTime">--:--:--</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 左侧日志 -->
+        <aside class="log-panel">
+            <div class="panel-header">
+                <div class="panel-title">AI 思考流</div>
+                <button onclick="clearLogs()" style="background:none;border:none;color:var(--neon-green);cursor:pointer;font-family:inherit;font-size:10px;">[清空]</button>
+            </div>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">
+                    <span class="log-timestamp">--:--:--</span>
+                    <span class="log-tag">SYSTEM</span>
+                    <span class="log-message">等待连接到 AI TradeBot...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 中央工作区 -->
+        <main class="workspace">
+            <div class="logic-cards" id="logicCards">
+                <div style="text-align:center;padding:100px 20px;color:var(--text-muted);">
+                    <div style="font-size:48px;margin-bottom:20px;opacity:0.3;">⏳</div>
+                    <div>等待事件输入...</div>
+                    <div style="font-size:11px;margin-top:10px;">运行 python scripts/simulate_hot_news.py 测试</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 右侧统计 -->
+        <aside class="stats-panel">
+            <div class="panel-header">
+                <div class="panel-title">系统状态</div>
+            </div>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value" id="statPerception">0</div>
+                    <div class="stat-label">感知捕获</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statAnalysis">0</div>
+                    <div class="stat-label">AI 分析</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statDecision">0</div>
+                    <div class="stat-label">决策生成</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statFiltered">0</div>
+                    <div class="stat-label">噪音过滤</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statAccuracy">0%</div>
+                    <div class="stat-label">决策准确率</div>
+                    <div class="stat-chart" id="accuracyChart">
+                        <!-- 动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 底部时间轴 -->
+        <footer class="timeline">
+            <span class="timeline-label">事件时间轴</span>
+            <div class="timeline-track" id="timelineTrack">
+                <div class="timeline-line"></div>
+                <!-- 动态生成事件点 -->
+            </div>
+        </footer>
+    </div>
+
+    <div class="connection-status" id="connectionStatus">
+        <div class="status-dot" id="connectionDot"></div>
+        <span id="connectionText">连接中...</span>
+    </div>
+
+    <script>
+        // =============================================================================
+        // 配置
+        // =============================================================================
+        const CONFIG = {
+            wsUrl: 'ws://localhost:8000/ws/events',
+            maxLogEntries: 100,
+            maxCards: 20,
+            reconnectInterval: 5000
+        };
+
+        // =============================================================================
+        // 状态
+        // =============================================================================
+        let ws = null;
+        let stats = {
+            events: 0,
+            decisions: 0,
+            filtered: 0,
+            perception: 0,
+            analysis: 0,
+            decision: 0,
+            accuracy: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        };
+        let activeCards = new Map();
+        let logEntries = [];
+
+        // =============================================================================
+        // 工具函数
+        // =============================================================================
+        function formatTime(date = new Date()) {
+            return date.toLocaleTimeString('zh-CN', { hour12: false });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // =============================================================================
+        // 日志系统
+        // =============================================================================
+        function addLog(type, tag, message, data = null) {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+
+            let dataHtml = '';
+            if (data) {
+                dataHtml = `<div style="margin-top:5px;font-size:10px;opacity:0.7;">${escapeHtml(JSON.stringify(data))}</div>`;
+            }
+
+            entry.innerHTML = `
+                <span class="log-timestamp">${formatTime()}</span>
+                <span class="log-tag">${tag}</span>
+                <span class="log-message">${escapeHtml(message)}</span>
+                ${dataHtml}
+            `;
+
+            container.insertBefore(entry, container.firstChild);
+
+            // 限制日志数量
+            while (container.children.length > CONFIG.maxLogEntries) {
+                container.removeChild(container.lastChild);
+            }
+
+            logEntries.unshift({ type, tag, message, data, time: Date.now() });
+        }
+
+        function clearLogs() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '';
+            logEntries = [];
+        }
+
+        // =============================================================================
+        // 卡片系统
+        // =============================================================================
+        function createCard(eventData) {
+            const container = document.getElementById('logicCards');
+
+            // 移除空状态
+            const emptyState = container.querySelector('[style*="text-align:center"]');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const card = document.createElement('div');
+            card.className = 'logic-card new';
+            card.id = `card-${eventData.event_id}`;
+            card.dataset.eventId = eventData.event_id;
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="card-ticker">${eventData.ticker || 'UNKNOWN'}</div>
+                    <div class="card-status status-analyzing" id="status-${eventData.event_id}">分析中</div>
+                </div>
+                <div class="thinking-progress">
+                    <div class="progress-steps">
+                        <div class="progress-step perception active" id="step1-${eventData.event_id}"></div>
+                        <div class="progress-step analysis" id="step2-${eventData.event_id}"></div>
+                        <div class="progress-step decision" id="step3-${eventData.event_id}"></div>
+                    </div>
+                    <div class="progress-labels">
+                        <span class="progress-label active">感知</span>
+                        <span class="progress-label" id="label2-${eventData.event_id}">推演</span>
+                        <span class="progress-label" id="label3-${eventData.event_id}">决策</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-summary">${eventData.summary || '等待分析...'}</div>
+                    <div class="card-exit-plan" id="exitplan-${eventData.event_id}" style="display:none;">
+                        <div class="exit-plan-item">
+                            <span class="exit-plan-label">止盈目标:</span>
+                            <span class="exit-plan-value" id="tp-${eventData.event_id}">--</span>
+                        </div>
+                        <div class="exit-plan-item">
+                            <span class="exit-plan-label">止损边界:</span>
+                            <span class="exit-plan-value" id="sl-${eventData.event_id}">--</span>
+                        </div>
+                        <div class="exit-plan-item">
+                            <span class="exit-plan-label">失效时间:</span>
+                            <span class="exit-plan-value" id="exp-${eventData.event_id}">--</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-details" id="details-${eventData.event_id}">
+                    <div class="detail-section">
+                        <div class="detail-title">原始数据源</div>
+                        <div class="detail-content" id="raw-${eventData.event_id}">
+                            ${eventData.raw_data ? escapeHtml(JSON.stringify(eventData.raw_data, null, 2)) : '等待数据...'}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-title">AI 思维链</div>
+                        <div class="detail-content" id="chain-${eventData.event_id}">
+                            ${eventData.reasoning ? escapeHtml(eventData.reasoning) : '等待分析...'}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => toggleCard(eventData.event_id));
+            container.insertBefore(card, container.firstChild);
+
+            // 限制卡片数量
+            while (container.children.length > CONFIG.maxCards) {
+                const lastCard = container.lastChild;
+                if (lastCard.id) {
+                    const oldId = lastCard.dataset.eventId;
+                    activeCards.delete(oldId);
+                }
+                container.removeChild(lastCard);
+            }
+
+            activeCards.set(eventData.event_id, { element: card, data: eventData });
+
+            // 添加到时间轴
+            addTimelineEvent(eventData);
+
+            return card;
+        }
+
+        function updateCard(eventId, updateData) {
+            const card = activeCards.get(eventId);
+            if (!card) return;
+
+            // 更新进度条
+            if (updateData.stage === 'analysis') {
+                const step2 = document.getElementById(`step2-${eventId}`);
+                const label2 = document.getElementById(`label2-${eventId}`);
+                if (step2) step2.classList.add('active');
+                if (label2) label2.classList.add('active');
+            }
+
+            if (updateData.stage === 'decision') {
+                const step3 = document.getElementById(`step3-${eventId}`);
+                const label3 = document.getElementById(`label3-${eventId}`);
+                const status = document.getElementById(`status-${eventId}`);
+                if (step3) step3.classList.add('active');
+                if (label3) label3.classList.add('active');
+                if (status) {
+                    status.className = 'card-status status-decision';
+                    status.textContent = '已完成';
+                }
+            }
+
+            // 更新退出计划
+            if (updateData.exit_plan) {
+                const exitPlan = document.getElementById(`exitplan-${eventId}`);
+                if (exitPlan) {
+                    exitPlan.style.display = 'block';
+                    document.getElementById(`tp-${eventId}`).textContent = updateData.exit_plan.take_profit || '--';
+                    document.getElementById(`sl-${eventId}`).textContent = updateData.exit_plan.stop_loss || '--';
+                    document.getElementById(`exp-${eventId}`).textContent = updateData.exit_plan.expiration || '--';
+                }
+            }
+
+            // 更新思维链
+            if (updateData.reasoning) {
+                const chain = document.getElementById(`chain-${eventId}`);
+                if (chain) {
+                    chain.textContent = updateData.reasoning;
+                }
+            }
+
+            // 更新数据
+            card.data = { ...card.data, ...updateData };
+        }
+
+        function toggleCard(eventId) {
+            const card = activeCards.get(eventId);
+            if (card) {
+                card.element.classList.toggle('expanded');
+            }
+        }
+
+        // =============================================================================
+        // 时间轴
+        // =============================================================================
+        function addTimelineEvent(eventData) {
+            const track = document.getElementById('timelineTrack');
+            const event = document.createElement('div');
+            event.className = 'timeline-event';
+            event.title = `${eventData.ticker}: ${eventData.summary}`;
+            event.style.left = Math.random() * 90 + '%';
+            event.addEventListener('click', () => {
+                const card = document.getElementById(`card-${eventData.event_id}`);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.classList.add('expanded');
+                    setTimeout(() => card.classList.remove('expanded'), 3000);
+                }
+            });
+            track.appendChild(event);
+
+            // 限制时间轴事件数量
+            while (track.children.length > 20) {
+                track.removeChild(track.lastChild);
+            }
+        }
+
+        // =============================================================================
+        // 统计更新
+        // =============================================================================
+        function updateStats() {
+            document.getElementById('totalEvents').textContent = stats.events;
+            document.getElementById('totalDecisions').textContent = stats.decisions;
+            document.getElementById('totalFiltered').textContent = stats.filtered;
+            document.getElementById('statPerception').textContent = stats.perception;
+            document.getElementById('statAnalysis').textContent = stats.analysis;
+            document.getElementById('statDecision').textContent = stats.decision;
+            document.getElementById('statFiltered').textContent = stats.filtered;
+
+            const accuracy = stats.decision > 0 ? Math.round((stats.decision / stats.events) * 100) : 0;
+            document.getElementById('statAccuracy').textContent = accuracy + '%';
+
+            // 更新图表
+            updateAccuracyChart();
+        }
+
+        function updateAccuracyChart() {
+            const chart = document.getElementById('accuracyChart');
+            chart.innerHTML = stats.accuracy.map((v, i) =>
+                `<div class="chart-bar" style="height:${Math.max(20, v * 100)}%"></div>`
+            ).join('');
+        }
+
+        // =============================================================================
+        // WebSocket
+        // =============================================================================
+        function connect() {
+            updateConnectionStatus('connecting');
+
+            try {
+                ws = new WebSocket(CONFIG.wsUrl);
+
+                ws.onopen = () => {
+                    updateConnectionStatus('connected');
+                    addLog('decision', 'SYSTEM', '已连接到 AI TradeBot 实时推送');
+                    clearLogs();
+                    addLog('decision', 'SYSTEM', 'AI 思考流已启动');
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateConnectionStatus('error');
+                };
+
+                ws.onclose = () => {
+                    updateConnectionStatus('disconnected');
+                    addLog('error', 'SYSTEM', '连接已断开，尝试重连...');
+                    setTimeout(connect, CONFIG.reconnectInterval);
+                };
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                updateConnectionStatus('error');
+                setTimeout(connect, CONFIG.reconnectInterval);
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            const dot = document.getElementById('connectionDot');
+            const text = document.getElementById('connectionText');
+            const wsDot = document.getElementById('wsStatus');
+            const wsText = document.getElementById('wsStatusText');
+            const statusEl = document.getElementById('connectionStatus');
+
+            const statuses = {
+                connecting: { text: '连接中...', class: '', wsClass: 'processing' },
+                connected: { text: '已连接', class: 'online', wsClass: 'online' },
+                disconnected: { text: '已断开', class: '', wsClass: '' },
+                error: { text: '连接错误', class: '', wsClass: '' }
+            };
+
+            const s = statuses[status] || statuses.disconnected;
+            text.textContent = s.text;
+            wsText.textContent = s.text;
+
+            dot.className = 'status-dot ' + s.class;
+            wsDot.className = 'status-dot ' + s.wsClass;
+
+            statusEl.classList.toggle('disconnected', status === 'disconnected' || status === 'error');
+        }
+
+        function handleMessage(data) {
+            switch (data.type) {
+                case 'perception_start':
+                    stats.perception++;
+                    stats.events++;
+                    addLog('perception', '感知', `开始扫描: ${data.data.source || '未知来源'}`);
+                    break;
+
+                case 'perception_captured':
+                    addLog('perception', '发现', `捕获事件: ${data.data.ticker} - ${data.data.title?.substring(0, 50)}...`);
+                    // 创建新卡片
+                    createCard(data.data);
+                    updateStats();
+                    break;
+
+                case 'analysis_start':
+                    stats.analysis++;
+                    addLog('analysis', '分析', `AI 开始分析: ${data.data.ticker || data.data.event_id}`);
+                    updateCard(data.data.event_id, { stage: 'analysis' });
+                    break;
+
+                case 'ai_thinking':
+                    addLog('analysis', '思考', `${data.data.model}: ${data.data.step}`);
+                    break;
+
+                case 'decision_complete':
+                    stats.decision++;
+                    stats.decision++;
+                    stats.accuracy[stats.accuracy.length - 1] = 1;
+                    stats.accuracy.shift();
+                    addLog('decision', '决策', `决策完成: ${data.data.action} ${data.data.ticker}`);
+                    updateCard(data.data.event_id, {
+                        stage: 'decision',
+                        exit_plan: data.data.exit_plan,
+                        reasoning: data.data.reasoning
+                    });
+                    updateStats();
+                    break;
+
+                case 'event_filtered':
+                    stats.filtered++;
+                    stats.accuracy[stats.accuracy.length - 1] = 0;
+                    stats.accuracy.shift();
+                    addLog('filtered', '过滤', `过滤事件: ${data.data.reason}`);
+                    updateStats();
+                    break;
+
+                case 'connected':
+                    addLog('decision', 'SYSTEM', data.data.message);
+                    break;
+
+                default:
+                    console.log('Unknown message type:', data.type);
+            }
+        }
+
+        // =============================================================================
+        // 矩阵雨背景
+        // =============================================================================
+        function initMatrixRain() {
+            const canvas = document.getElementById('matrixBg');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+
+            function draw() {
+                ctx.fillStyle = 'rgba(10, 10, 15, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#00ff41';
+                ctx.font = fontSize + 'px JetBrains Mono';
+
+                for (let i = 0; i < drops.length; i++) {
+                    const char = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+
+            setInterval(draw, 50);
+
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+
+        // =============================================================================
+        // 时间更新
+        // =============================================================================
+        function updateTime() {
+            document.getElementById('currentTime').textContent = formatTime();
+        }
+        setInterval(updateTime, 1000);
+
+        // =============================================================================
+        // 初始化
+        // =============================================================================
+        window.onload = () => {
+            initMatrixRain();
+            connect();
+            updateTime();
+            updateAccuracyChart();
+        };
+
+        window.onbeforeunload = () => {
+            if (ws) {
+                ws.close();
+            }
+        };
+    </script>
+</body>
+</html>
