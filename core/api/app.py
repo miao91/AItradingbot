@@ -14,6 +14,7 @@ from typing import Set
 from datetime import datetime
 
 from core.api.v1 import router as v1_router
+from core.api import realtime
 from shared.logging import get_logger
 
 
@@ -243,6 +244,9 @@ def create_app() -> FastAPI:
 
     # v1 API
     app.include_router(v1_router)
+    
+    # 实时问答API
+    app.include_router(realtime.router)
 
     # =============================================================================
     # Exception Handlers

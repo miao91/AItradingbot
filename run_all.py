@@ -31,8 +31,8 @@ def print_banner():
     print("  以终为始 - AI 量化交易系统")
     print()
     print("  正在启动服务:")
-    print("    - FastAPI 后端服务: http://localhost:8000")
-    print("    - Streamlit 看板:   http://localhost:8501")
+    print("    - FastAPI 后端服务: http://localhost:8503")
+    print("    - Streamlit 看板:   http://localhost:8502")
     print("    - 退出规划器监控: 后台线程")
     print("    - Tavily AI 搜索: 智能检索引擎")
     print()
@@ -176,7 +176,7 @@ def start_api_server():
             sys.executable, "-m", "uvicorn",
             "core.api.app:app",
             "--host", "0.0.0.0",
-            "--port", "8000",
+            "--port", "8503",
             "--reload"
         ],
         stdout=subprocess.PIPE,
@@ -189,9 +189,9 @@ def start_api_server():
     time.sleep(3)
 
     if process.poll() is None:
-        print("FastAPI 服务已启动: http://localhost:8000 [OK]")
-        print("  - API 文档: http://localhost:8000/docs")
-        print("  - 公共接口: http://localhost:8000/api/v1/public/active_events")
+        print("FastAPI 服务已启动: http://localhost:8503 [OK]")
+        print("  - API 文档: http://localhost:8503/docs")
+        print("  - 公共接口: http://localhost:8503/api/v1/public/active_events")
         print("  - Showcase:  docs/showcase/index.html")
         print()
         return process
@@ -208,7 +208,7 @@ def start_streamlit():
         [
             sys.executable, "-m", "streamlit",
             "run", "ui/app.py",
-            "--server.port", "8501",
+            "--server.port", "8502",
             "--server.address", "localhost",
             "--logger.level", "info"
         ],
@@ -222,7 +222,7 @@ def start_streamlit():
     time.sleep(5)
 
     if process.poll() is None:
-        print("Streamlit 看板已启动: http://localhost:8501 [OK]")
+        print("Streamlit 看板已启动: http://localhost:8502 [OK]")
         print()
         return process
     else:
@@ -545,10 +545,10 @@ async def main():
         print("=" * 60)
         print()
         print("  访问地址:")
-        print("    作战中心: http://localhost:8501")
-        print("    API 文档:  http://localhost:8000/docs")
-        print("    公共接口:  http://localhost:8000/api/v1/public/active_events")
-        print("    WebSocket:  ws://localhost:8000/ws/events")
+        print("    作战中心: http://localhost:8502")
+        print("    API 文档:  http://localhost:8503/docs")
+        print("    公共接口:  http://localhost:8503/api/v1/public/active_events")
+        print("    WebSocket:  ws://localhost:8503/ws/events")
         print("    Showcase:  docs/showcase/index.html")
         print()
         print("  服务状态:")

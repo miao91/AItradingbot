@@ -620,7 +620,7 @@
             <div class="gpu-status" id="gpuStatus">
                 <div class="gpu-icon">🎮</div>
                 <div class="gpu-info">
-                    <div class="gpu-title" id="gpuTitle">RTX 5080 就绪</div>
+                    <div class="gpu-title" id="gpuTitle">GPU 就绪</div>
                     <div class="gpu-detail" id="gpuDetail">100,000 次蒙特卡洛模拟待执行</div>
                 </div>
                 <div class="gpu-progress">
@@ -632,7 +632,7 @@
             <div class="panel">
                 <div class="panel-header">
                     <span class="panel-title">📈 实时数据 - <span id="selectedTicker">--</span></span>
-                    <span class="panel-badge">Tushare/AkShare</span>
+                    <span class="panel-badge">Market Data/Market API</span>
                 </div>
                 <div class="panel-body">
                     <div class="live-data-panel">
@@ -899,7 +899,7 @@
             document.getElementById('matrixContainer').innerHTML = `
                 <div style="text-align:center;padding:40px;color:var(--text-muted);">
                     <div class="loading-spinner" style="margin:0 auto;"></div>
-                    <div style="margin-top:15px;">🧠 GLM-5 正在分析全球情报...</div>
+                    <div style="margin-top:15px;">🧠 AI 正在分析全球情报...</div>
                 </div>
             `;
 
@@ -1061,8 +1061,8 @@
                 updateAuditReport(currentData.audit);
                 updateConclusion(currentData.conclusion);
 
-                document.getElementById('gpuTitle').textContent = 'RTX 5080 计算完成';
-                document.getElementById('gpuDetail').textContent = '100,000 次模拟 · CuPy GPU 加速';
+                document.getElementById('gpuTitle').textContent = 'GPU 计算完成';
+                document.getElementById('gpuDetail').textContent = '100,000 次模拟 · GPU GPU 加速';
 
             } catch (e) {
                 console.error('压力测试失败:', e);
@@ -1274,7 +1274,7 @@
             document.getElementById('auditJump').textContent = (data.jumpProb * 100).toFixed(1) + '%';
             document.getElementById('auditCrash').textContent = (data.crashProb * 100).toFixed(1) + '%';
             document.getElementById('auditSims').textContent = data.sims.toLocaleString();
-            document.getElementById('auditGpu').textContent = data.gpu ? 'CuPy' : 'NumPy';
+            document.getElementById('auditGpu').textContent = data.gpu ? 'GPU' : 'NumPy';
         }
 
         // 更新结论

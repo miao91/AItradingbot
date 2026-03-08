@@ -42,7 +42,17 @@
       "Bash(__NEW_LINE_93f8cfc91b94ad11__ echo \"\")",
       "Bash(ls:*)",
       "Bash(git reset:*)",
-      "Bash(git filter-branch:*)"
+      "Bash(git filter-branch:*)",
+      "Bash(__NEW_LINE_99f558d9d44fcd01__ echo \"\")",
+      "Bash(__NEW_LINE_f6cbecdc72499478__ echo \"\")",
+      "Bash(__NEW_LINE_b2d8c1376464a760__ echo \"\")",
+      "Bash(__NEW_LINE_83cffbf2cfda65d1__ echo \"\")",
+      "Bash(echo:*)",
+      "Bash(md:*)",
+      "Bash(move:*)",
+      "Bash(if not exist \"ui\\\\pages\" mkdir \"ui\\\\pages\")",
+      "Bash(streamlit run:*)",
+      "Bash(find:*)"
     ]
   }
 }

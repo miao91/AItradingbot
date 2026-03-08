@@ -366,3 +366,39 @@ def get_kimi_client() -> KimiClient:
     if _kimi_client is None:
         _kimi_client = KimiClient()
     return _kimi_client
+
+
+# =============================================================================
+# DeepSeek 客户端
+# =============================================================================
+
+class DeepSeekClient(BaseLLMClient):
+    """DeepSeek AI 客户端"""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "deepseek-chat",
+        timeout: int = 60,
+    ):
+        api_key = api_key or os.getenv("DEEPSEEK_API_KEY", "")
+        base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
+
+        super().__init__(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+            timeout=timeout,
+            max_input_tokens=32000,  # DeepSeek 支持 32k 上下文
+        )
+
+
+_deepseek_client: Optional[DeepSeekClient] = None
+
+
+def get_deepseek_client() -> DeepSeekClient:
+    """获取 DeepSeek 客户端单例"""
+    global _deepseek_client
+    if _deepseek_client is None:
+        _deepseek_client = DeepSeekClient()
+    return _deepseek_client

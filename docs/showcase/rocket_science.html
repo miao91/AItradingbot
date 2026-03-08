@@ -985,7 +985,7 @@
             document.getElementById('maxDrawdown').textContent = (data.maxDrawdown * 100).toFixed(1) + '%';
             document.getElementById('crashProb').textContent = (data.crashProb * 100).toFixed(1) + '%';
             document.getElementById('nSims').textContent = data.nSims.toLocaleString();
-            document.getElementById('gpuStatus').textContent = data.gpuAccelerated ? '✓ CuPy' : 'NumPy';
+            document.getElementById('gpuStatus').textContent = data.gpuAccelerated ? '✓ GPU' : 'NumPy';
         }
 
         // 动画循环

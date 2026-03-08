@@ -5,6 +5,7 @@ AI TradeBot - Tushare 股票哨兵（升级版）
 集成 DeepSeek 快速打分系统
 """
 import asyncio
+import os
 import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Set, Callable, Awaitable
@@ -47,9 +48,6 @@ TUSHARE_SENTINEL_CONFIG = {
         ]
     },
 }
-
-# 导入 os
-import os
 
 
 # =============================================================================
@@ -185,22 +183,25 @@ class TushareSentinel:
         try:
             pro = ts.pro_api()
 
-            df = pro.ggt_shares(
-                fields="datetime,title,content,url",
-                num=self.config["max_results_per_call"],
-            )
+            # 使用 major_news 接口获取长篇通讯
+            df = pro.major_news(fields="title,pub_time,src,url")
 
             if df is None or df.empty:
                 return []
 
             items = []
             for _, row in df.iterrows():
-                publish_time = self._parse_datetime(str(row.get("datetime", "")))
+                # 解析时间格式 "2026-02-28 22:43:30"
+                pub_time = str(row.get("pub_time", ""))
+                try:
+                    publish_time = datetime.strptime(pub_time, "%Y-%m-%d %H:%M:%S")
+                except:
+                    publish_time = datetime.now()
 
                 item = NewsItem(
                     title=str(row.get("title", ""))[:100],
-                    content=str(row.get("content", ""))[:200],
-                    source="财联社",
+                    content="",  # major_news 没有 content 字段
+                    source=str(row.get("src", "财联社")),
                     source_type=SourceType.CLS,
                     publish_time=publish_time,
                     url=str(row.get("url", "")) if row.get("url") else None,
@@ -211,7 +212,8 @@ class TushareSentinel:
 
                 items.append(item)
 
-            return items
+            logger.info(f"[Tushare] major_news 获取 {len(items)} 条新闻")
+            return items[:self.config["max_results_per_call"]]
 
         except Exception as e:
             logger.error(f"[Tushare] 财联社获取失败: {e}")
@@ -222,25 +224,35 @@ class TushareSentinel:
         try:
             pro = ts.pro_api()
 
-            df = pro.ggt_shares(
-                fields="datetime,title,content,url",
-                num=self.config["max_results_per_call"],
-            )
+            # 使用 news 接口获取新闻
+            df = pro.news(fields="datetime,content,title")
 
             if df is None or df.empty:
                 return []
 
             items = []
             for _, row in df.iterrows():
-                publish_time = self._parse_datetime(str(row.get("datetime", "")))
+                # 解析时间格式 "2026-02-28 22:43:30"
+                dt_str = str(row.get("datetime", ""))
+                try:
+                    publish_time = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+                except:
+                    publish_time = datetime.now()
+
+                # news 接口的 title 通常是 None，使用 content 作为标题
+                title = str(row.get("title", ""))[:100] if row.get("title") else ""
+                content = str(row.get("content", ""))[:200] if row.get("content") else ""
+
+                # 如果 title 为空，使用 content 的前100个字符作为标题
+                if not title and content:
+                    title = content[:100]
 
                 item = NewsItem(
-                    title=str(row.get("title", ""))[:100],
-                    content=str(row.get("content", ""))[:200],
+                    title=title,
+                    content=content,
                     source="新浪财经",
                     source_type=SourceType.SINA,
                     publish_time=publish_time,
-                    url=str(row.get("url", "")) if row.get("url") else None,
                 )
 
                 item.is_core_keyword = self._check_keywords(item)
@@ -248,7 +260,8 @@ class TushareSentinel:
 
                 items.append(item)
 
-            return items
+            logger.info(f"[Tushare] news 获取 {len(items)} 条新闻")
+            return items[:self.config["max_results_per_call"]]
 
         except Exception as e:
             logger.error(f"[Tushare] 新浪获取失败: {e}")
